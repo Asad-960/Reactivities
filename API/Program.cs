@@ -1,3 +1,5 @@
+using Application.Activities.Queries;
+using Application.Core;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 
@@ -14,12 +16,25 @@ builder.Services.AddDbContext<DataContext>(opt =>
 
 builder.Services.AddCors();
 
+builder.Services.AddMediatR(x => x.RegisterServicesFromAssemblyContaining<GetActivityList.Handler>());
+// Our mapping profiles will be added to the dll assembly file into list and we can get them from there
+builder.Services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+
 var app = builder.Build();
 
 app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
     .WithOrigins("http://localhost:3000", "https://localhost:3000"));
 
 app.MapControllers();
+
+
+
+
+
+
+
+
+
 
 // Creating a new scope for DI. Like borrowing a book
 using var scope = app.Services.CreateScope();
