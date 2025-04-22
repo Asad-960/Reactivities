@@ -1,4 +1,8 @@
 import axios from "axios";
+import { store } from "../stores/store";
+import { toast } from "react-toastify";
+import { route } from "../../app/router/Routes";
+
 
 const sleep = (delay: number) => {
     return new Promise(resolve => {
@@ -9,14 +13,57 @@ const agent = axios.create({
     baseURL: import.meta.env.VITE_API_URL
 })
 
-agent.interceptors.response.use(async response => {
-    try {
+agent.interceptors.request.use(config => {
+    store.uiStore.isBusy();
+    return config;
+})
+
+agent.interceptors.response.use(
+    async response => {
         await sleep(500);
+        store.uiStore.isIdle();
         return response;
-    } catch (error) {
-        console.log(error);
+    },
+    async error => {
+        await sleep(500);
+        store.uiStore.isIdle();
+
+        const {status, data} = error.response;
+        switch (status)
+        {
+            case 400:
+                if (data.errors) {
+                    const modalStateErros = [];
+                    for (const key in data.errors)
+                    {
+                        if (data.errors[key])
+                        {
+                            modalStateErros.push(data.errors[key])
+                        }
+                    }
+                    throw modalStateErros.flat();
+                } else {
+                    toast.error(data);
+                }
+                break;
+            case 401:
+                toast.error("Unauthorized");
+                break;
+            case 404:
+                route.navigate('/not-found');
+                break;
+            case 400:
+                toast.error("Bad request");
+                break;
+            case 500:
+                route.navigate('/server-error', {state: {error: data}});
+                break;
+            default:
+                break;
+        }
         return Promise.reject(error)
     }
-})
+    
+)
 
 export default agent; 
